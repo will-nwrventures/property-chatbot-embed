@@ -720,7 +720,15 @@ If confidence >= 95%, include a work order object:
                     
                     // Try to parse JSON response, fallback to simple response if parsing fails
                     try {
-                        return JSON.parse(aiResponse);
+                        // Clean the response by removing markdown code blocks if present
+                        let cleanResponse = aiResponse.trim();
+                        if (cleanResponse.startsWith('```json')) {
+                            cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+                        } else if (cleanResponse.startsWith('```')) {
+                            cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+                        }
+                    
+                        return JSON.parse(cleanResponse);
                     } catch {
                         return {
                             response: aiResponse,
