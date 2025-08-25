@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrueScope - Property Maintenance Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #ffffff;
+            color: #334155;
+            line-height: 1.5;
+        }
+        
+        .chatbot-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 16px;
+        }
+        
+        .confidence-meter {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .confidence-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .confidence-title {
+            font-weight: 600;
+            color: #334155;
+        }
+        
+        .confidence-percentage {
+            font-size: 18px;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 12px;
+            background-color: #f1f5f9;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+        
+        .confidence-text {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .chat-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 24px;
+            padding-right: 8px;
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .message.user .message-content {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .message.assistant .message-content {
+            background-color: #f1f5f9;
+            color: #334155;
+        }
+        
+        .message.system .message-content {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #16a34a;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        .message-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            font-size: 14px;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .send-button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+            min-height: 44px;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .file-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: center;
+            background-color: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .file-upload:hover {
+            background-color: #f1f5f9;
+            border-color: #3b82f6;
+        }
+        
+        .file-upload-text {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background-color: #f1f5f9;
+            border-radius: 18px;
+            max-width: 100px;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #64748b;
+            border-radius: 50%;
+            animation: typing 1.5s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+        
+        .work-order {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+        
+        .work-order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .work-order-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #334155;
+        }
+        
+        .work-order-badge {
+            background-color: #dcfce7;
+            color: #16a34a;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .work-order-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        
+        .work-order-section h3 {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #334155;
+        }
+        
+        .work-order-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .work-order-description {
+            background-color: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 14px;
+            color: #475569;
+        }
+        
+        @media (max-width: 640px) {
+            .chatbot-container {
+                padding: 12px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .work-order-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <div class="header">
+            <h1>TrueScope</h1>
+            <p>AI-powered property maintenance triage and work order generation</p>
+        </div>
+        
+        <div class="confidence-meter">
+            <div class="confidence-header">
+                <span class="confidence-title">Diagnostic Confidence</span>
+                <span class="confidence-percentage" id="confidence-value">0%</span>
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidence-bar" style="width: 0%"></div>
+            </div>
+            <div class="confidence-text" id="confidence-text">
+                Initial assessment - Need more information
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message assistant">
+                    <div class="message-content">
+                        Hello! I'm your property maintenance assistant. I'll help diagnose and triage maintenance issues at your rental property. Please describe the issue you're experiencing, and feel free to upload photos or videos to help me understand better.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="file-upload" id="file-upload">
+                <div class="file-upload-text">
+                    📎 Drag & drop photos/videos here or click to upload<br>
+                    <small>Supports images and videos up to 10MB</small>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        class="message-input" 
+                        id="message-input" 
+                        placeholder="Describe the maintenance issue..."
+                        rows="1"
+                    ></textarea>
+                </div>
+                <button class="send-button" id="send-button">Send</button>
+            </div>
+        </div>
+        
+        <div id="work-order-container"></div>
+    </div>
+
+    <script>
+        class PropertyMaintenanceBot {
+            constructor() {
+                this.messages = [];
+                this.confidence = 0;
+                this.isLoading = false;
+                this.messageCount = 0;
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.autoResize();
+            }
+            
+            initializeElements() {
+                this.messagesContainer = document.getElementById('messages');
+                this.messageInput = document.getElementById('message-input');
+                this.sendButton = document.getElementById('send-button');
+                this.fileUpload = document.getElementById('file-upload');
+                this.confidenceValue = document.getElementById('confidence-value');
+                this.confidenceBar = document.getElementById('confidence-bar');
+                this.confidenceText = document.getElementById('confidence-text');
+                this.workOrderContainer = document.getElementById('work-order-container');
+            }
+            
+            bindEvents() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+                
+                this.messageInput.addEventListener('input', () => this.autoResize());
+                
+                this.fileUpload.addEventListener('click', () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.accept = 'image/*,video/*';
+                    input.onchange = (e) => this.handleFiles(e.target.files);
+                    input.click();
+                });
+                
+                this.fileUpload.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.fileUpload.style.backgroundColor = '#f1f5f9';
+                });
+                
+                this.fileUpload.addEventListener('dragleave', () => {
+                    this.fileUpload.style.backgroundColor = '#f8fafc';
+                });
+                
+                this.fileUpload.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.fileUpload.style.backgroundColor = '#f8fafc';
+                    this.handleFiles(e.dataTransfer.files);
+                });
+            }
+            
+            autoResize() {
+                this.messageInput.style.height = 'auto';
+                this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
+            }
+            
+            handleFiles(files) {
+                const fileArray = Array.from(files);
+                const validFiles = fileArray.filter(file => 
+                    file.type.startsWith('image/') || file.type.startsWith('video/')
+                );
+                
+                if (validFiles.length > 0) {
+                    this.addMessage('user', `📎 Uploaded ${validFiles.length} file(s): ${validFiles.map(f => f.name).join(', ')}`);
+                    this.processMessage();
+                }
+            }
+            
+            sendMessage() {
+                const message = this.messageInput.value.trim();
+                if (!message || this.isLoading) return;
+                
+                this.addMessage('user', message);
+                this.messageInput.value = '';
+                this.autoResize();
+                this.processMessage();
+            }
+            
+            addMessage(type, content) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${type}`;
+                
+                const contentElement = document.createElement('div');
+                contentElement.className = 'message-content';
+                contentElement.textContent = content;
+                
+                messageElement.appendChild(contentElement);
+                this.messagesContainer.appendChild(messageElement);
+                
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+            
+            showTypingIndicator() {
+                const typingElement = document.createElement('div');
+                typingElement.className = 'message assistant';
+                typingElement.id = 'typing-indicator';
+                
+                const typingContent = document.createElement('div');
+                typingContent.className = 'typing-indicator';
+                typingContent.innerHTML = `
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                    <span style="font-size: 12px; color: #64748b;">Analyzing...</span>
+                `;
+                
+                typingElement.appendChild(typingContent);
+                this.messagesContainer.appendChild(typingElement);
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+            
+            hideTypingIndicator() {
+                const typingIndicator = document.getElementById('typing-indicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+            
+            processMessage() {
+                if (this.isLoading) return;
+                
+                this.isLoading = true;
+                this.sendButton.disabled = true;
+                this.showTypingIndicator();
+                
+                // Simulate API processing
+                setTimeout(() => {
+                    this.hideTypingIndicator();
+                    
+                    const responses = [
+                        "I can see the issue you've described. Could you please provide more details about when this problem started occurring?",
+                        "Based on your description and photos, this appears to be a plumbing issue. Can you tell me if there's any water damage visible?",
+                        "Thank you for the additional information. I'm analyzing the severity and can provide recommendations shortly.",
+                        "I have high confidence in my diagnosis. Let me generate a work order for you."
+                    ];
+                    
+                    const responseIndex = Math.min(this.messageCount, responses.length - 1);
+                    this.addMessage('assistant', responses[responseIndex]);
+                    
+                    // Update confidence
+                    this.confidence = Math.min(this.confidence + 25, 100);
+                    this.updateConfidence();
+                    
+                    // Generate work order at high confidence
+                    if (this.confidence >= 95 && !document.querySelector('.work-order')) {
+                        setTimeout(() => {
+                            this.addMessage('system', 'Work order generated with 95%+ confidence. Ready for landlord review and vendor assignment.');
+                            this.generateWorkOrder();
+                        }, 1000);
+                    }
+                    
+                    this.messageCount++;
+                    this.isLoading = false;
+                    this.sendButton.disabled = false;
+                }, 2000);
+            }
+            
+            updateConfidence() {
+                this.confidenceValue.textContent = `${this.confidence}%`;
+                this.confidenceBar.style.width = `${this.confidence}%`;
+                
+                if (this.confidence >= 95) {
+                    this.confidenceText.textContent = 'High confidence - Ready for work order';
+                } else if (this.confidence >= 70) {
+                    this.confidenceText.textContent = 'Good confidence - Gathering more data';
+                } else if (this.confidence >= 40) {
+                    this.confidenceText.textContent = 'Building confidence - Please provide more details';
+                } else {
+                    this.confidenceText.textContent = 'Initial assessment - Need more information';
+                }
+            }
+            
+            generateWorkOrder() {
+                const workOrderHTML = `
+                    <div class="work-order">
+                        <div class="work-order-header">
+                            <h2 class="work-order-title">📋 Work Order Generated</h2>
+                            <div class="work-order-badge">${this.confidence}% Confidence</div>
+                        </div>
+                        
+                        <div class="work-order-grid">
+                            <div class="work-order-section">
+                                <h3>Issue Details</h3>
+                                <div class="work-order-detail">
+                                    <span>Type:</span>
+                                    <span>Plumbing - Leak Repair</span>
+                                </div>
+                                <div class="work-order-detail">
+                                    <span>Urgency:</span>
+                                    <span>Medium</span>
+                                </div>
+                                <div class="work-order-detail">
+                                    <span>Est. Cost:</span>
+                                    <span>$150-300</span>
+                                </div>
+                                
+                                <h4 style="margin-top: 16px; margin-bottom: 8px;">Description</h4>
+                                <div class="work-order-description">
+                                    Kitchen sink leak requiring immediate attention. Water damage assessment needed.
+                                </div>
+                            </div>
+                            
+                            <div class="work-order-section">
+                                <h3>Recommended Action</h3>
+                                <div class="work-order-description">
+                                    Replace faulty pipe connection and inspect surrounding area for damage. Schedule follow-up inspection for water damage assessment.
+                                </div>
+                                
+                                <h4 style="margin-top: 16px; margin-bottom: 8px;">Next Steps</h4>
+                                <ul style="list-style: none; padding: 0; font-size: 14px; color: #475569;">
+                                    <li style="padding: 4px 0;">✅ Review work order details</li>
+                                    <li style="padding: 4px 0;">✅ Assign to qualified vendor</li>
+                                    <li style="padding: 4px 0;">⏳ Schedule maintenance appointment</li>
+                                    <li style="padding: 4px 0;">⏳ Follow up with tenant</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                this.workOrderContainer.innerHTML = workOrderHTML;
+            }
+        }
+        
+        // Initialize the chatbot when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new PropertyMaintenanceBot();
+        });
+        
+        // Google AI Studio Integration (placeholder)
+        // Replace this with your actual Google AI Studio API integration
+        function integrateWithGoogleAI() {
+            // Example integration code:
+            /*
+            const API_KEY = 'your-google-ai-studio-api-key';
+            const API_URL = 'your-google-ai-studio-endpoint';
+            
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    context: 'property_maintenance_triage',
+                    files: uploadedFiles
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Process AI response
+                // Update confidence score
+                // Generate work order when ready
+            });
+            */
+        }
+    </script>
+</body>
+</html>
