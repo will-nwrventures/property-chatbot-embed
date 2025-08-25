@@ -470,6 +470,9 @@
             }
             
             addMessage(type, content) {
+                // Store message for conversation history
+                this.messages.push({ type, content });
+                
                 const messageElement = document.createElement('div');
                 messageElement.className = `message ${type}`;
                 
@@ -511,43 +514,47 @@
                 }
             }
             
-            processMessage() {
+            async processMessage() {
                 if (this.isLoading) return;
                 
                 this.isLoading = true;
                 this.sendButton.disabled = true;
                 this.showTypingIndicator();
                 
-                // Simulate API processing
-                setTimeout(() => {
+                try {
+                    // Call Google AI Studio TrueScope-Demo project
+                    const aiResult = await callGoogleAI(this.messages, []);
+                    
                     this.hideTypingIndicator();
+                    this.addMessage('assistant', aiResult.response);
                     
-                    const responses = [
-                        "I can see the issue you've described. Could you please provide more details about when this problem started occurring?",
-                        "Based on your description and photos, this appears to be a plumbing issue. Can you tell me if there's any water damage visible?",
-                        "Thank you for the additional information. I'm analyzing the severity and can provide recommendations shortly.",
-                        "I have high confidence in my diagnosis. Let me generate a work order for you."
-                    ];
-                    
-                    const responseIndex = Math.min(this.messageCount, responses.length - 1);
-                    this.addMessage('assistant', responses[responseIndex]);
-                    
-                    // Update confidence
-                    this.confidence = Math.min(this.confidence + 25, 100);
+                    // Update confidence based on AI response
+                    this.confidence = aiResult.confidence;
                     this.updateConfidence();
                     
-                    // Generate work order at high confidence
-                    if (this.confidence >= 95 && !document.querySelector('.work-order')) {
+                    // Generate work order if AI determines it's ready
+                    if (aiResult.shouldGenerateWorkOrder && !document.querySelector('.work-order')) {
                         setTimeout(() => {
                             this.addMessage('system', 'Work order generated with 95%+ confidence. Ready for landlord review and vendor assignment.');
-                            this.generateWorkOrder();
+                            this.generateWorkOrderFromAI(aiResult.workOrder);
                         }, 1000);
                     }
                     
-                    this.messageCount++;
-                    this.isLoading = false;
-                    this.sendButton.disabled = false;
-                }, 2000);
+                } catch (error) {
+                    this.hideTypingIndicator();
+                    console.error('Error processing message:', error);
+                    
+                    // Show user-friendly error message
+                    if (error.message.includes('API key')) {
+                        this.addMessage('system', '🔑 API Configuration Required: Please add your Google AI Studio API key to connect to TrueScope-Demo. Check the browser console for details.');
+                    } else {
+                        this.addMessage('assistant', 'I apologize, but I\'m having trouble processing your request right now. Please try again in a moment.');
+                    }
+                }
+                
+                this.messageCount++;
+                this.isLoading = false;
+                this.sendButton.disabled = false;
             }
             
             updateConfidence() {
@@ -565,11 +572,21 @@
                 }
             }
             
-            generateWorkOrder() {
+            generateWorkOrderFromAI(workOrderData) {
+                // Use AI-generated work order data or fallback to example
+                const workOrder = workOrderData || {
+                    type: 'General Maintenance',
+                    urgency: 'Medium',
+                    estimatedCost: '$100-200',
+                    description: 'Maintenance issue requiring professional attention.',
+                    recommendedAction: 'Professional assessment and repair recommended.',
+                    nextSteps: ['Review work order details', 'Assign to qualified vendor', 'Schedule maintenance appointment', 'Follow up with tenant']
+                };
+                
                 const workOrderHTML = `
                     <div class="work-order">
                         <div class="work-order-header">
-                            <h2 class="work-order-title">📋 Work Order Generated</h2>
+                            <h2 class="work-order-title">📋 Work Order Generated by TrueScope</h2>
                             <div class="work-order-badge">${this.confidence}% Confidence</div>
                         </div>
                         
@@ -578,35 +595,34 @@
                                 <h3>Issue Details</h3>
                                 <div class="work-order-detail">
                                     <span>Type:</span>
-                                    <span>Plumbing - Leak Repair</span>
+                                    <span>${workOrder.type}</span>
                                 </div>
                                 <div class="work-order-detail">
                                     <span>Urgency:</span>
-                                    <span>Medium</span>
+                                    <span>${workOrder.urgency}</span>
                                 </div>
                                 <div class="work-order-detail">
                                     <span>Est. Cost:</span>
-                                    <span>$150-300</span>
+                                    <span>${workOrder.estimatedCost}</span>
                                 </div>
                                 
                                 <h4 style="margin-top: 16px; margin-bottom: 8px;">Description</h4>
                                 <div class="work-order-description">
-                                    Kitchen sink leak requiring immediate attention. Water damage assessment needed.
+                                    ${workOrder.description}
                                 </div>
                             </div>
                             
                             <div class="work-order-section">
                                 <h3>Recommended Action</h3>
                                 <div class="work-order-description">
-                                    Replace faulty pipe connection and inspect surrounding area for damage. Schedule follow-up inspection for water damage assessment.
+                                    ${workOrder.recommendedAction}
                                 </div>
                                 
                                 <h4 style="margin-top: 16px; margin-bottom: 8px;">Next Steps</h4>
                                 <ul style="list-style: none; padding: 0; font-size: 14px; color: #475569;">
-                                    <li style="padding: 4px 0;">✅ Review work order details</li>
-                                    <li style="padding: 4px 0;">✅ Assign to qualified vendor</li>
-                                    <li style="padding: 4px 0;">⏳ Schedule maintenance appointment</li>
-                                    <li style="padding: 4px 0;">⏳ Follow up with tenant</li>
+                                    ${workOrder.nextSteps.map((step, index) => 
+                                        `<li style="padding: 4px 0;">${index < 2 ? '✅' : '⏳'} ${step}</li>`
+                                    ).join('')}
                                 </ul>
                             </div>
                         </div>
@@ -622,33 +638,110 @@
             new PropertyMaintenanceBot();
         });
         
-        // Google AI Studio Integration (placeholder)
-        // Replace this with your actual Google AI Studio API integration
-        function integrateWithGoogleAI() {
-            // Example integration code:
-            /*
-            const API_KEY = 'your-google-ai-studio-api-key';
-            const API_URL = 'your-google-ai-studio-endpoint';
+        // Google AI Studio Integration
+        // IMPORTANT: Add your Google AI Studio API key here
+        const GOOGLE_AI_API_KEY = 'AIzaSyAm1cjev-ltT9Fr9KuzX7xd604D5OU1zV0';
+        const GOOGLE_AI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+        
+        async function callGoogleAI(messages, uploadedFiles = []) {
+            if (!GOOGLE_AI_API_KEY || GOOGLE_AI_API_KEY === 'YOUR_GOOGLE_AI_STUDIO_API_KEY_HERE') {
+                throw new Error('Please add your Google AI Studio API key to the GOOGLE_AI_API_KEY variable');
+            }
             
-            fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: userMessage,
-                    context: 'property_maintenance_triage',
-                    files: uploadedFiles
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Process AI response
-                // Update confidence score
-                // Generate work order when ready
-            });
-            */
+            // Build conversation context for TrueScope-Demo
+            const conversationHistory = messages.map(msg => msg.content).join('\n');
+            
+            const systemPrompt = `You are TrueScope, an AI property maintenance diagnostic assistant. Your role is to:
+1. Analyze maintenance issues described by tenants
+2. Ask follow-up questions to gather more information
+3. Provide diagnostic confidence scores (0-100%)
+4. Generate structured work orders when confidence reaches 95%+
+
+Current conversation:
+${conversationHistory}
+
+Based on this conversation, provide:
+1. A helpful response to continue the diagnosis
+2. A confidence score (0-100) based on available information
+3. If confidence >= 95%, indicate that a work order should be generated
+
+Format your response as JSON:
+{
+  "response": "Your helpful diagnostic response",
+  "confidence": 75,
+  "shouldGenerateWorkOrder": false,
+  "workOrder": null
+}
+
+If confidence >= 95%, include a work order object:
+{
+  "response": "Diagnostic complete. Generating work order.",
+  "confidence": 95,
+  "shouldGenerateWorkOrder": true,
+  "workOrder": {
+    "type": "Issue type",
+    "urgency": "Low/Medium/High",
+    "estimatedCost": "$X-Y",
+    "description": "Detailed description",
+    "recommendedAction": "What should be done",
+    "nextSteps": ["Step 1", "Step 2", "Step 3"]
+  }
+}`;
+
+            try {
+                const response = await fetch(`${GOOGLE_AI_API_URL}?key=${GOOGLE_AI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: systemPrompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            topK: 40,
+                            topP: 0.95,
+                            maxOutputTokens: 1024,
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Google AI API error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const aiResponse = data.candidates[0].content.parts[0].text;
+                    
+                    // Try to parse JSON response, fallback to simple response if parsing fails
+                    try {
+                        return JSON.parse(aiResponse);
+                    } catch {
+                        return {
+                            response: aiResponse,
+                            confidence: Math.min(50 + messages.length * 15, 90),
+                            shouldGenerateWorkOrder: false,
+                            workOrder: null
+                        };
+                    }
+                } else {
+                    throw new Error('Unexpected response format from Google AI');
+                }
+            } catch (error) {
+                console.error('Google AI API Error:', error);
+                // Fallback response
+                return {
+                    response: "I'm having trouble connecting to the diagnostic system. Please describe your maintenance issue and I'll do my best to help.",
+                    confidence: 0,
+                    shouldGenerateWorkOrder: false,
+                    workOrder: null
+                };
+            }
         }
     </script>
 </body>
