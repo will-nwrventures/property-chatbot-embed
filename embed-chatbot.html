@@ -638,110 +638,34 @@
             new PropertyMaintenanceBot();
         });
         
-        // Google AI Studio Integration
-        // IMPORTANT: Add your Google AI Studio API key here
-        const GOOGLE_AI_API_KEY = 'AIzaSyAm1cjev-ltT9Fr9KuzX7xd604D5OU1zV0';
-        const GOOGLE_AI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+         // Secure AI Integration via Supabase Edge Function
+        // Replace YOUR_SUPABASE_URL with your actual Supabase URL
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
         
         async function callGoogleAI(messages, uploadedFiles = []) {
-            if (!GOOGLE_AI_API_KEY || GOOGLE_AI_API_KEY === 'YOUR_GOOGLE_AI_STUDIO_API_KEY_HERE') {
-                throw new Error('Please add your Google AI Studio API key to the GOOGLE_AI_API_KEY variable');
+            if (!SUPABASE_URL || SUPABASE_URL === 'https://fgfqhlhdyfrnremdpwrz.supabase.co') {
+                throw new Error('Please add your Supabase URL to the SUPABASE_URL variable');
             }
             
-            // Build conversation context for TrueScope-Demo
-            const conversationHistory = messages.map(msg => msg.content).join('\n');
-            
-            const systemPrompt = `You are TrueScope, an AI property maintenance diagnostic assistant. Your role is to:
-1. Analyze maintenance issues described by tenants
-2. Ask follow-up questions to gather more information
-3. Provide diagnostic confidence scores (0-100%)
-4. Generate structured work orders when confidence reaches 95%+
-
-Current conversation:
-${conversationHistory}
-
-Based on this conversation, provide:
-1. A helpful response to continue the diagnosis
-2. A confidence score (0-100) based on available information
-3. If confidence >= 95%, indicate that a work order should be generated
-
-Format your response as JSON:
-{
-  "response": "Your helpful diagnostic response",
-  "confidence": 75,
-  "shouldGenerateWorkOrder": false,
-  "workOrder": null
-}
-
-If confidence >= 95%, include a work order object:
-{
-  "response": "Diagnostic complete. Generating work order.",
-  "confidence": 95,
-  "shouldGenerateWorkOrder": true,
-  "workOrder": {
-    "type": "Issue type",
-    "urgency": "Low/Medium/High",
-    "estimatedCost": "$X-Y",
-    "description": "Detailed description",
-    "recommendedAction": "What should be done",
-    "nextSteps": ["Step 1", "Step 2", "Step 3"]
-  }
-}`;
-
             try {
-                const response = await fetch(`${GOOGLE_AI_API_URL}?key=${GOOGLE_AI_API_KEY}`, {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/chat-ai`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: systemPrompt
-                            }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.7,
-                            topK: 40,
-                            topP: 0.95,
-                            maxOutputTokens: 1024,
-                        }
+                        messages,
+                        uploadedFiles
                     })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Google AI API error: ${response.status} ${response.statusText}`);
+                  throw new Error(`API error: ${response.status} ${response.statusText}`);
                 }
 
-                const data = await response.json();
-                
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    const aiResponse = data.candidates[0].content.parts[0].text;
-                    
-                    // Try to parse JSON response, fallback to simple response if parsing fails
-                    try {
-                        // Clean the response by removing markdown code blocks if present
-                        let cleanResponse = aiResponse.trim();
-                        if (cleanResponse.startsWith('```json')) {
-                            cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-                        } else if (cleanResponse.startsWith('```')) {
-                            cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
-                        }
-                    
-                        return JSON.parse(cleanResponse);
-                    } catch {
-                        return {
-                            response: aiResponse,
-                            confidence: Math.min(50 + messages.length * 15, 90),
-                            shouldGenerateWorkOrder: false,
-                            workOrder: null
-                        };
-                    }
-                } else {
-                    throw new Error('Unexpected response format from Google AI');
-                }
+                return await response.json();
             } catch (error) {
-                console.error('Google AI API Error:', error);
+                console.error('AI API Error:', error);
                 // Fallback response
                 return {
                     response: "I'm having trouble connecting to the diagnostic system. Please describe your maintenance issue and I'll do my best to help.",
