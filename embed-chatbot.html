@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrueScope - Smarter Diagnostics to Fix Faster!</title>
+    <title>TrueScope - Property Maintenance Assistant</title>
     <style>
         * {
             margin: 0;
@@ -354,7 +354,7 @@
             <div class="messages" id="messages">
                 <div class="message assistant">
                     <div class="message-content">
-                        Hello! I'm your personal maintenance technician. Please describe the issue you're experiencing, and feel free to upload photos or videos to help me understand better.
+                        Hello! I'm your personal maintenance technician. I'll help diagnose and triage maintenance issues at your rental property. Please describe the issue you're experiencing, and feel free to upload photos or videos to help me understand better.
                     </div>
                 </div>
             </div>
@@ -371,7 +371,7 @@
                     <textarea 
                         class="message-input" 
                         id="message-input" 
-                        placeholder="Is there anything I can help you with around the house?..."
+                        placeholder="Can I help with anything around the house?..."
                         rows="1"
                     ></textarea>
                 </div>
@@ -638,9 +638,9 @@
             new PropertyMaintenanceBot();
         });
         
-         // Secure AI Integration via Supabase Edge Function
+        // Secure AI Integration via Supabase Edge Function
         // Replace YOUR_SUPABASE_URL with your actual Supabase URL
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+        const SUPABASE_URL = 'https://fgfqhlhdyfrnremdpwrz.supabase.co';
         
         async function callGoogleAI(messages, uploadedFiles = []) {
             if (!SUPABASE_URL || SUPABASE_URL === 'https://fgfqhlhdyfrnremdpwrz.supabase.co') {
@@ -660,7 +660,7 @@
                 });
 
                 if (!response.ok) {
-                  throw new Error(`API error: ${response.status} ${response.statusText}`);
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
                 }
 
                 return await response.json();
